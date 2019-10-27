@@ -83,6 +83,8 @@ msgid ""
 "<br/>\n"
 "                                <b>Duration</b><br/>"
 msgstr ""
+"<br/>\n"
+"                                <b>Duur</b><br/>"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.track_view
@@ -90,6 +92,8 @@ msgid ""
 "<br/>\n"
 "                                <b>Location</b><br/>"
 msgstr ""
+"<br/>\n"
+"                                <b>Locatie</b><br/>"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
@@ -106,7 +110,7 @@ msgstr "<span id=\"search_number\">0</span> gevonden"
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.view_event_track_form
 msgid "<span>hours</span>"
-msgstr ""
+msgstr "<span>uren</span>"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
@@ -154,7 +158,7 @@ msgstr ""
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.track_view
 msgid "About The Speaker"
-msgstr ""
+msgstr "Over de spreker"
 
 #. module: website_event_track
 #: model:ir.model.fields,field_description:website_event_track.field_event_track_stage__is_done
@@ -621,7 +625,7 @@ msgstr "Hoe geautomatiseerde processen ontwikkelen"
 #. module: website_event_track
 #: model:event.track,name:website_event_track.event_track16
 msgid "How to follow us on the social media"
-msgstr "Hoe ons volgen op sociale media"
+msgstr "Hoe ons volgen op social media"
 
 #. module: website_event_track
 #: model:event.track,name:website_event_track.event_track9
@@ -826,7 +830,7 @@ msgstr "Mijn bedrijfspresentatie"
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.view_event_track_search
 msgid "My Tracks"
-msgstr ""
+msgstr "Mijn sessies"
 
 #. module: website_event_track
 #: model:ir.model.fields,field_description:website_event_track.field_event_track__partner_name
@@ -979,7 +983,7 @@ msgstr "Rood"
 #. module: website_event_track
 #: model:event.track.stage,name:website_event_track.event_track_stage4
 msgid "Refused"
-msgstr "Geweigerd"
+msgstr "Afgewezen"
 
 #. module: website_event_track
 #: model:ir.model.fields,field_description:website_event_track.field_event_track__user_id
@@ -1027,7 +1031,7 @@ msgstr "Zilver"
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_social
 msgid "Social Stream"
-msgstr "Sociale stream"
+msgstr "Social media stream"
 
 #. module: website_event_track
 #: model:ir.model.fields,field_description:website_event_track.field_event_track__partner_id
@@ -1043,22 +1047,22 @@ msgstr "E-mail spreker"
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
 msgid "Speaker(s) Biography"
-msgstr ""
+msgstr "Biografie spreker"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
 msgid "Speaker(s) Email"
-msgstr ""
+msgstr "E-mail spreker"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
 msgid "Speaker(s) Name"
-msgstr ""
+msgstr "Naam spreker"
 
 #. module: website_event_track
 #: model_terms:ir.ui.view,arch_db:website_event_track.event_track_proposal
 msgid "Speaker(s) Phone"
-msgstr ""
+msgstr "Telefoonnummer spreker"
 
 #. module: website_event_track
 #: code:addons/website_event_track/models/event_track.py:0
@@ -1310,7 +1314,7 @@ msgstr "Volg geblokkeerd"
 #. module: website_event_track
 #: model:ir.model.fields,help:website_event_track.field_event_track__duration
 msgid "Track duration in hours."
-msgstr ""
+msgstr "Volg duur in uren."
 
 #. module: website_event_track
 #: model:ir.model.fields,field_description:website_event_track.field_event_event__track_ids
