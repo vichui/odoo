@@ -24,14 +24,13 @@ var session = require('web.session');
 var QWeb = core.qweb;
 
 var AbstractController = mvc.Controller.extend(ActionMixin, {
-    custom_events: {
-        get_controller_query_params: '_onGetControllerQueryParams',
+    custom_events: _.extend({}, ActionMixin.custom_events, {
         navigation_move: '_onNavigationMove',
         open_record: '_onOpenRecord',
         search: '_onSearch',
         switch_view: '_onSwitchView',
         search_panel_domain_updated: '_onSearchPanelDomainUpdated',
-    },
+    }),
     events: {
         'click a[type="action"]': '_onActionClicked',
     },
@@ -547,21 +546,6 @@ var AbstractController = mvc.Controller.extend(ActionMixin, {
         }
     },
     /**
-     * FIXME: this logic should be rethought
-     *
-     * Handles a context request: provides to the caller the state of the
-     * current controller.
-     *
-     * @private
-     * @param {OdooEvent} ev
-     * @param {function} ev.data.callback used to send the requested state
-     */
-    _onGetControllerQueryParams: function (ev) {
-        ev.stopPropagation();
-        var state = this.getOwnedQueryParams();
-        ev.data.callback(state || {});
-    },
-    /**
      * Called either from the control panel to focus the controller
      * or from the view to focus the search bar
      *
@@ -616,7 +600,7 @@ var AbstractController = mvc.Controller.extend(ActionMixin, {
      */
     _onSearch: function (ev) {
         ev.stopPropagation();
-        this.reload(_.extend({offset: 0}, ev.data));
+        this.reload(_.extend({offset: 0, groupsOffset: 0}, ev.data));
     },
     /**
      * @private

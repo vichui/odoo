@@ -45,6 +45,10 @@ var SnippetEditor = Widget.extend({
         this.templateOptions = templateOptions;
         this.isTargetParentEditable = false;
         this.isTargetMovable = false;
+
+        this.__isStarted = new Promise(resolve => {
+            this.__isStartedResolveFunc = resolve;
+        });
     },
     /**
      * @override
@@ -121,7 +125,9 @@ var SnippetEditor = Widget.extend({
         // a flickering when not needed.
         this.$target.on('transitionend.snippet_editor, animationend.snippet_editor', postAnimationCover);
 
-        return Promise.all(defs);
+        return Promise.all(defs).then(() => {
+            this.__isStartedResolveFunc(this);
+        });
     },
     /**
      * @override
@@ -162,7 +168,7 @@ var SnippetEditor = Widget.extend({
      * Makes the editor overlay cover the associated snippet.
      */
     cover: function () {
-        if (!this.isShown() || !this.$target.length) {
+        if (!this.isShown() || !this.$target.length || !this.$target.is(':visible')) {
             return;
         }
         var offset = this.$target.offset();
@@ -186,17 +192,22 @@ var SnippetEditor = Widget.extend({
     /**
      * Removes the associated snippet from the DOM and destroys the associated
      * editor (itself).
+     *
+     * @returns {Promise}
      */
-    removeSnippet: function () {
+    removeSnippet: async function () {
         this.toggleFocus(false);
 
-        this.trigger_up('call_for_each_child_snippet', {
-            $snippet: this.$target,
-            callback: function (editor, $snippet) {
-                for (var i in editor.styles) {
-                    editor.styles[i].onRemove();
-                }
-            },
+        await new Promise(resolve => {
+            this.trigger_up('call_for_each_child_snippet', {
+                $snippet: this.$target,
+                callback: function (editor, $snippet) {
+                    for (var i in editor.styles) {
+                        editor.styles[i].onRemove();
+                    }
+                    resolve();
+                },
+            });
         });
 
         this.trigger_up('go_to_parent', {$snippet: this.$target});
@@ -223,6 +234,8 @@ var SnippetEditor = Widget.extend({
                 editor = $parent.data('snippet-editor');
             }
             if (isEmptyAndRemovable($parent, editor)) {
+                // TODO maybe this should be part of the actual Promise being
+                // returned by the function ?
                 setTimeout(() => editor.removeSnippet());
             }
         }
@@ -305,6 +318,36 @@ var SnippetEditor = Widget.extend({
         if (this.$el) {
             this.$el.toggleClass('o_keypress', !!isTextEdition && this.isShown());
         }
+    },
+    /**
+     * Clones the current snippet.
+     *
+     * @private
+     * @param {boolean} recordUndo
+     */
+    clone: function (recordUndo) {
+        this.trigger_up('snippet_will_be_cloned', {$target: this.$target});
+
+        var $clone = this.$target.clone(false);
+
+        if (recordUndo) {
+            this.trigger_up('request_history_undo_record', {$target: this.$target});
+        }
+
+        this.$target.after($clone);
+        this.trigger_up('call_for_each_child_snippet', {
+            $snippet: $clone,
+            callback: function (editor, $snippet) {
+                for (var i in editor.styles) {
+                    editor.styles[i].onClone({
+                        isCurrent: ($snippet.is($clone)),
+                    });
+                }
+            },
+        });
+        this.trigger_up('snippet_cloned', {$target: $clone, $origin: this.$target});
+
+        $clone.trigger('content_changed');
     },
 
     //--------------------------------------------------------------------------
@@ -417,26 +460,7 @@ var SnippetEditor = Widget.extend({
      */
     _onCloneClick: function (ev) {
         ev.preventDefault();
-        ev.stopPropagation();
-
-        this.trigger_up('snippet_will_be_cloned', {$target: this.$target});
-
-        var $clone = this.$target.clone(false);
-
-        this.trigger_up('request_history_undo_record', {$target: this.$target});
-        this.$target.after($clone);
-        this.trigger_up('call_for_each_child_snippet', {
-            $snippet: $clone,
-            callback: function (editor, $snippet) {
-                for (var i in editor.styles) {
-                    editor.styles[i].onClone({
-                        isCurrent: ($snippet.is($clone)),
-                    });
-                }
-            },
-        });
-        this.trigger_up('snippet_cloned', {$target: $clone, $origin: this.$target});
-        $clone.trigger('content_changed');
+        this.clone(true);
     },
     /**
      * Called when the snippet is starting to be dragged thanks to the 'move'
@@ -645,6 +669,7 @@ var SnippetsMenu = Widget.extend({
         'activate_insertion_zones': '_onActivateInsertionZones',
         'activate_snippet': '_onActivateSnippet',
         'call_for_each_child_snippet': '_onCallForEachChildSnippet',
+        'clone_snippet': '_onCloneSnippet',
         'cover_update': '_onOverlaysCoverUpdate',
         'deactivate_snippet': '_onDeactivateSnippet',
         'drag_and_drop_stop': '_onDragAndDropStop',
@@ -1051,16 +1076,17 @@ var SnippetsMenu = Widget.extend({
                 resolve(null);
             }).then(editorToEnable => {
                 // First disable all editors...
-                this.snippetEditors.forEach(editor => {
+                for (let i = this.snippetEditors.length; i--;) {
+                    const editor = this.snippetEditors[i];
                     if (editor === editorToEnable) {
                         // Avoid disable -> enable of an editor (the toggleFocus
                         // method is in charge of doing nothing is nothing has
                         // to be done but if we explicitly ask for disable then
                         // enable... it will disable then enable).
-                        return;
+                        continue;
                     }
                     editor.toggleFocus(false, previewMode);
-                });
+                }
                 // ... then enable the right editor
                 if (editorToEnable) {
                     editorToEnable.toggleFocus(true, previewMode);
@@ -1076,6 +1102,7 @@ var SnippetsMenu = Widget.extend({
         _.each(this.snippetEditors, function (snippetEditor) {
             snippetEditor.destroy();
         });
+        this.snippetEditors.splice(0);
     },
     /**
      * Calls a given callback 'on' the given snippet and all its child ones if
@@ -1362,7 +1389,7 @@ var SnippetsMenu = Widget.extend({
         var self = this;
         var snippetEditor = $snippet.data('snippet-editor');
         if (snippetEditor) {
-            return Promise.resolve(snippetEditor);
+            return snippetEditor.__isStarted;
         }
 
         var def;
@@ -1372,6 +1399,15 @@ var SnippetsMenu = Widget.extend({
         }
 
         return Promise.resolve(def).then(function (parentEditor) {
+            // When reaching this position, after the Promise resolution, the
+            // snippet editor instance might have been created by another call
+            // to _createSnippetEditor... the whole logic should be improved
+            // to avoid doing this here.
+            snippetEditor = $snippet.data('snippet-editor');
+            if (snippetEditor) {
+                return snippetEditor.__isStarted;
+            }
+
             let editableArea = self.getEditableArea();
             snippetEditor = new SnippetEditor(parentEditor || self, $snippet, self.templateOptions, $snippet.closest('[data-oe-type="html"], .oe_structure').add(editableArea), self.options);
             self.snippetEditors.push(snippetEditor);
@@ -1631,6 +1667,19 @@ var SnippetsMenu = Widget.extend({
     _onOverlaysCoverUpdate: function () {
         this.snippetEditors.forEach(editor => {
             editor.cover();
+        });
+    },
+    /**
+     * Called when a child editor asks to clone a snippet, allows to correctly
+     * call the _onClone methods if the element's editor has one.
+     *
+     * @private
+     * @param {OdooEvent} ev
+     */
+    _onCloneSnippet: function (ev) {
+        ev.stopPropagation();
+        this._createSnippetEditor(ev.data.$snippet).then(editor => {
+            editor.clone();
         });
     },
     /**

@@ -6,37 +6,38 @@
 # Ayoub Zahid <azahid@agilorg.com>, 2019
 # Fabien Pinckaers <fp@openerp.com>, 2019
 # Rémi CAZENAVE <remi@le-filament.com>, 2019
+# Nathan Grognet <ngr@odoo.com>, 2019
 # Florian Hatat, 2019
 # Nancy Bolognesi <nb@microcom.ca>, 2019
 # matthieu gaillet <matthieu.gaillet@lebrass.be>, 2019
 # Laura Piraux <lap@odoo.com>, 2019
 # Alain van de Werve <avw@openerp.com>, 2019
 # f5f0a0dac17dde787a1d812a6989680e, 2019
-# Nathan Grognet <ngr@odoo.com>, 2019
 # Thomas Dobbelsteyn <tdo@odoo.com>, 2019
 # a270031086f2a0d3514bc0cb507b48f6, 2019
-# Moka Tourisme <hello@mokatourisme.fr>, 2019
 # Aurélien Pillevesse <aurelienpillevesse@hotmail.fr>, 2019
 # Fred Gilson <fgi@odoo.com>, 2019
 # Eloïse Stilmant <est@odoo.com>, 2019
-# Pierrick Brun <brun.pierrick@protonmail.com>, 2019
 # Olivier ANDRE <frsw194@gmail.com>, 2019
 # Mohamed BENKIRANE <benkirane.med.ali@gmail.com>, 2019
 # Celia Tydgat <cty@odoo.com>, 2019
 # Melanie Bernard <mbe@odoo.com>, 2019
 # thomas quertinmont <tqu@odoo.com>, 2019
-# Cécile Collart <cco@odoo.com>, 2019
 # gdp Odoo <gdp@odoo.com>, 2019
 # Martin Trigaux, 2019
 # Nathan Noël <nathan070@me.com>, 2019
+# Moka Tourisme <hello@mokatourisme.fr>, 2019
+# lcaodoo <lca@odoo.com>, 2019
+# Cécile Collart <cco@odoo.com>, 2020
+# Frédéric GILSON <frederic.gilson@logicasoft.eu>, 2020
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 13.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-07 07:12+0000\n"
+"POT-Creation-Date: 2019-12-05 12:32+0000\n"
 "PO-Revision-Date: 2019-08-26 09:12+0000\n"
-"Last-Translator: Nathan Noël <nathan070@me.com>, 2019\n"
+"Last-Translator: Frédéric GILSON <frederic.gilson@logicasoft.eu>, 2020\n"
 "Language-Team: French (https://www.transifex.com/odoo/teams/41243/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -517,6 +518,11 @@ msgid "Allow global discounts on orders"
 msgstr "Autoriser les remises globales sur les commandes"
 
 #. module: point_of_sale
+#: model:ir.model.fields,field_description:point_of_sale.field_pos_config__allowed_pricelist_ids
+msgid "Allowed Pricelists"
+msgstr ""
+
+#. module: point_of_sale
 #: model:ir.model.fields,field_description:point_of_sale.field_pos_make_payment__amount
 #: model:ir.model.fields,field_description:point_of_sale.field_pos_payment__amount
 msgid "Amount"
@@ -555,6 +561,7 @@ msgid "Another session is already opened for this point of sale."
 msgstr "Une autre session est déjà ouverte pour ce point de vente."
 
 #. module: point_of_sale
+#: model_terms:ir.ui.view,arch_db:point_of_sale.pos_config_view_form
 #: model_terms:ir.ui.view,arch_db:point_of_sale.view_pos_config_search
 msgid "Archived"
 msgstr "Archivé"
@@ -861,7 +868,7 @@ msgstr "Catégorie utilisé sur le Point de Vente"
 #. module: point_of_sale
 #: model:pos.category,name:point_of_sale.pos_category_chairs
 msgid "Chairs"
-msgstr ""
+msgstr "Sièges"
 
 #. module: point_of_sale
 #. openerp-web
@@ -1123,7 +1130,7 @@ msgstr "Connexion au Proxy"
 #: code:addons/point_of_sale/static/src/js/models.js:0
 #, python-format
 msgid "Connecting to the IoT Box"
-msgstr ""
+msgstr "Connexion à l'IoT Box"
 
 #. module: point_of_sale
 #. openerp-web
@@ -1442,7 +1449,7 @@ msgstr "Dé-sélectionner le client"
 #: model:product.product,name:point_of_sale.desk_organizer
 #: model:product.template,name:point_of_sale.desk_organizer_product_template
 msgid "Desk Organizer"
-msgstr ""
+msgstr "Organisateur de bureau"
 
 #. module: point_of_sale
 #: model:product.product,name:point_of_sale.desk_pad
@@ -1876,7 +1883,7 @@ msgstr "La connexion HTTPS au boitier IOT a échouée"
 #: code:addons/point_of_sale/static/src/xml/pos.xml:0
 #, python-format
 msgid "Hardware Events"
-msgstr "Évènements matériels"
+msgstr "Événements matériels"
 
 #. module: point_of_sale
 #. openerp-web
@@ -2059,7 +2066,7 @@ msgstr "Lot article invalide"
 #: model_terms:ir.ui.view,arch_db:point_of_sale.pos_config_view_form
 #: model_terms:ir.ui.view,arch_db:point_of_sale.view_pos_pos_form
 msgid "Inventory"
-msgstr "Stock"
+msgstr "Inventaire"
 
 #. module: point_of_sale
 #. openerp-web
@@ -2418,7 +2425,7 @@ msgstr ""
 #: model:product.product,name:point_of_sale.monitor_stand
 #: model:product.template,name:point_of_sale.monitor_stand_product_template
 msgid "Monitor Stand"
-msgstr ""
+msgstr "Support d'écran"
 
 #. module: point_of_sale
 #: model_terms:ir.ui.view,arch_db:point_of_sale.view_pos_session_search
@@ -2734,8 +2741,8 @@ msgstr "Commande"
 #: code:addons/point_of_sale/static/src/js/models.js:0
 #: code:addons/point_of_sale/static/src/js/models.js:0
 #, python-format
-msgid "Order "
-msgstr "Commande "
+msgid "Order %s"
+msgstr ""
 
 #. module: point_of_sale
 #: code:addons/point_of_sale/models/pos_order.py:0
@@ -3244,7 +3251,7 @@ msgstr ""
 #. module: point_of_sale
 #: model:ir.model,name:point_of_sale.model_pos_order_line
 msgid "Point of Sale Order Lines"
-msgstr ""
+msgstr "Lignes des commandes du point de vente"
 
 #. module: point_of_sale
 #: model:ir.model,name:point_of_sale.model_pos_order
@@ -4036,7 +4043,8 @@ msgstr "Un article peut avoir plusieurs prix, réductions automatiques, etc."
 #: model_terms:ir.ui.view,arch_db:point_of_sale.pos_config_view_form
 msgid "Set shop-specific prices, seasonal discounts, etc."
 msgstr ""
-"Définir des prix, des remises saisonnières, etc. propres à un commerce."
+"Définir des prix spécifiques au point de vente, des remises saisonnières, "
+"etc."
 
 #. module: point_of_sale
 #: model:ir.actions.act_window,name:point_of_sale.action_pos_configuration
@@ -4093,8 +4101,24 @@ msgstr ""
 #. openerp-web
 #: code:addons/point_of_sale/static/src/js/gui.js:0
 #, python-format
-msgid "Some orders could not be submitted to"
-msgstr "Certaines commandes n'ont pas pu être soumisses à"
+msgid ""
+"Some orders could not be submitted to the server due to configuration "
+"errors. You can exit the Point of Sale, but do not close the session before "
+"the issue has been resolved."
+msgstr ""
+
+#. module: point_of_sale
+#. openerp-web
+#: code:addons/point_of_sale/static/src/js/gui.js:0
+#, python-format
+msgid ""
+"Some orders could not be submitted to the server due to internet connection "
+"issues. You can exit the Point of Sale, but do not close the session before "
+"the issue has been resolved."
+msgstr ""
+"Des commandes n'ont pas pu être envoyées au serveur à cause d'un problème de"
+" connexion internet. Vous pouvez quitter le point de vente, mais ne clôturez"
+" par la session avant d'avoir résolu ce problème."
 
 #. module: point_of_sale
 #: model:ir.model,name:point_of_sale.model_pos_pack_operation_lot
@@ -4350,7 +4374,7 @@ msgid ""
 "                    or action associated with the scanned barcode."
 msgstr ""
 "Le point de vente n'a pas pu trouver de produit, client, employé ou d'action"
-" associé au code-barre scanné."
+" associé au code-barres scanné."
 
 #. module: point_of_sale
 #: code:addons/point_of_sale/models/pos_config.py:0
@@ -4702,6 +4726,11 @@ msgstr ""
 "href=# data-oe-model=pos.order data-oe-id=%d>%s</a>"
 
 #. module: point_of_sale
+#: model:ir.model.fields,help:point_of_sale.field_pos_config__allowed_pricelist_ids
+msgid "This is a technical field used for the domain of pricelist_id."
+msgstr ""
+
+#. module: point_of_sale
 #: model:ir.model.fields,help:point_of_sale.field_pos_config__fiscal_position_ids
 msgid ""
 "This is useful for restaurants with onsite and take-away services that imply"
@@ -4984,7 +5013,7 @@ msgstr "Unités"
 #: code:addons/point_of_sale/static/src/xml/pos.xml:0
 #, python-format
 msgid "Unknown Barcode"
-msgstr "Code-barre inconnu"
+msgstr "Code-barres inconnu"
 
 #. module: point_of_sale
 #. openerp-web
@@ -5206,6 +5235,13 @@ msgstr ""
 msgid "You cannot create a session before the accounting lock date."
 msgstr ""
 "Vous ne pouvez pas créer une session avant la date de fermeture comptable."
+
+#. module: point_of_sale
+#: code:addons/point_of_sale/models/account_bank_statement.py:0
+#, python-format
+msgid ""
+"You cannot delete a bank statement used in an open Point of Sale session."
+msgstr ""
 
 #. module: point_of_sale
 #: code:addons/point_of_sale/models/product.py:0

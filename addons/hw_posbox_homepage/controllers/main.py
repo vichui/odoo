@@ -13,13 +13,14 @@ from odoo import http
 import os
 from odoo.tools import misc
 from pathlib import Path
+import threading
 
-from uuid import getnode as get_mac
 from odoo.addons.hw_proxy.controllers import main as hw_proxy
 from odoo.addons.web.controllers import main as web
 from odoo.modules.module import get_resource_path
 from odoo.addons.hw_drivers.tools import helpers
 from odoo.addons.hw_drivers.controllers.driver import iot_devices
+from odoo.http import Response
 
 _logger = logging.getLogger(__name__)
 
@@ -44,19 +45,19 @@ wifi_config_template = jinja_env.get_template('wifi_config.html')
 driver_list_template = jinja_env.get_template('driver_list.html')
 remote_connect_template = jinja_env.get_template('remote_connect.html')
 configure_wizard_template = jinja_env.get_template('configure_wizard.html')
-six_payment_terminal_template = jinja_env.get_template('six_payment_terminal.html')
 list_credential_template = jinja_env.get_template('list_credential.html')
+upgrade_page_template = jinja_env.get_template('upgrade_page.html')
 
 class IoTboxHomepage(web.Home):
+    def __init__(self):
+        super(IoTboxHomepage,self).__init__()
+        self.updating = threading.Lock()
 
-    def get_six_terminal(self):
-        terminal_id = helpers.read_file_first_line('odoo-six-payment-terminal.conf')
-        return terminal_id or 'Not Configured'
+    def clean_partition(self):
+        subprocess.check_call(['sudo', 'bash', '-c', '. /home/pi/odoo/addons/point_of_sale/tools/posbox/configuration/upgrade.sh; cleanup'])
 
     def get_homepage_data(self):
         hostname = str(socket.gethostname())
-        mac = get_mac()
-        h = iter(hex(mac)[2:].zfill(12))
         ssid = helpers.get_ssid()
         wired = subprocess.check_output(['cat', '/sys/class/net/eth0/operstate']).decode('utf-8').strip('\n')
         if wired == 'up':
@@ -73,17 +74,16 @@ class IoTboxHomepage(web.Home):
         for device in iot_devices:
             iot_device.append({
                 'name': iot_devices[device].device_name + ' : ' + str(iot_devices[device].data['value']),
-                'type': iot_devices[device].device_type,
+                'type': iot_devices[device].device_type.replace('_', ' '),
                 'message': iot_devices[device].device_identifier + iot_devices[device].get_message()
             })
 
         return {
             'hostname': hostname,
             'ip': helpers.get_ip(),
-            'mac': ":".join(i + next(h) for i in h),
+            'mac': helpers.get_mac_address(),
             'iot_device_status': iot_device,
             'server_status': helpers.get_odoo_server_url() or 'Not Configured',
-            'six_terminal': self.get_six_terminal(),
             'network_status': network,
             'version': helpers.get_version(),
             }
@@ -93,14 +93,7 @@ class IoTboxHomepage(web.Home):
         wifi = Path.home() / 'wifi_network.txt'
         remote_server = Path.home() / 'odoo-remote-server.conf'
         if (wifi.exists() == False or remote_server.exists() == False) and helpers.access_point():
-            return configure_wizard_template.render({
-                'title': 'Configure IoT Box',
-                'breadcrumb': 'Configure IoT Box',
-                'loading_message': 'Configuring your IoT Box',
-                'ssid': helpers.get_wifi_essid(),
-                'server': helpers.get_odoo_server_url(),
-                'hostname': subprocess.check_output('hostname').decode('utf-8'),
-                })
+            return "<meta http-equiv='refresh' content='0; url=http://" + helpers.get_ip() + ":8069/steps'>"
         else:
             return homepage_template.render(self.get_homepage_data())
 
@@ -268,22 +261,70 @@ class IoTboxHomepage(web.Home):
         else:
             return 'already running'
 
-    @http.route('/six_payment_terminal', type='http', auth='none', cors='*', csrf=False)
-    def six_payment_terminal(self):
-        return six_payment_terminal_template.render({
-            'title': 'Six Payment Terminal',
-            'breadcrumb': 'Six Payment Terminal',
-            'terminalId': self.get_six_terminal(),
+    @http.route('/hw_proxy/upgrade', type='http', auth='none', )
+    def upgrade(self):
+        commit = subprocess.check_output(["git", "--work-tree=/home/pi/odoo/", "--git-dir=/home/pi/odoo/.git", "log", "-1"]).decode('utf-8').replace("\n", "<br/>")
+        flashToVersion = helpers.check_image()
+        actualVersion = helpers.get_version()
+        if flashToVersion:
+            flashToVersion = '%s.%s' % (flashToVersion.get('major', ''), flashToVersion.get('minor', ''))
+        return upgrade_page_template.render({
+            'title': "Odoo's IoTBox - Software Upgrade",
+            'breadcrumb': 'IoT Box Software Upgrade',
+            'loading_message': 'Updating IoT box',
+            'commit': commit,
+            'flashToVersion': flashToVersion,
+            'actualVersion': actualVersion,
         })
 
-    @http.route('/six_payment_terminal_add', type='http', auth='none', cors='*', csrf=False)
-    def add_six_payment_terminal(self, terminal_id):
-        helpers.write_file('odoo-six-payment-terminal.conf', terminal_id)
-        subprocess.check_call(["sudo", "service", "odoo", "restart"])
-        return 'http://' + helpers.get_ip() + ':8069'
+    @http.route('/hw_proxy/perform_upgrade', type='http', auth='none')
+    def perform_upgrade(self):
+        self.updating.acquire()
+        os.system('/home/pi/odoo/addons/point_of_sale/tools/posbox/configuration/posbox_update.sh')
+        self.updating.release()
+        return 'SUCCESS'
 
-    @http.route('/six_payment_terminal_clear', type='http', auth='none', cors='*', csrf=False)
-    def clear_six_payment_terminal(self):
-        helpers.unlink_file('odoo-six-payment-terminal.conf')
-        subprocess.check_call(["sudo", "service", "odoo", "restart"])
-        return "<meta http-equiv='refresh' content='0; url=http://" + helpers.get_ip() + ":8069'>"
+    @http.route('/hw_proxy/get_version', type='http', auth='none')
+    def check_version(self):
+        return helpers.get_version()
+
+    @http.route('/hw_proxy/perform_flashing_create_partition', type='http', auth='none')
+    def perform_flashing_create_partition(self):
+        try:
+            response = subprocess.check_output(['sudo', 'bash', '-c', '. /home/pi/odoo/addons/point_of_sale/tools/posbox/configuration/upgrade.sh; create_partition']).decode().split('\n')[-2]
+            if response == 'Error_Card_Size':
+                raise Exception(response)
+            return Response('success', status=200)
+        except subprocess.CalledProcessError as e:
+            raise Exception(e.output)
+        except Exception as e:
+            _logger.error('A error encountered : %s ' % e)
+            return Response(str(e), status=500)
+
+    @http.route('/hw_proxy/perform_flashing_download_raspbian', type='http', auth='none')
+    def perform_flashing_download_raspbian(self):
+        try:
+            response = subprocess.check_output(['sudo', 'bash', '-c', '. /home/pi/odoo/addons/point_of_sale/tools/posbox/configuration/upgrade.sh; download_raspbian']).decode().split('\n')[-2]
+            if response == 'Error_Raspbian_Download':
+                raise Exception(response)
+            return Response('success', status=200)
+        except subprocess.CalledProcessError as e:
+            raise Exception(e.output)
+        except Exception as e:
+            self.clean_partition()
+            _logger.error('A error encountered : %s ' % e)
+            return Response(str(e), status=500)
+
+    @http.route('/hw_proxy/perform_flashing_copy_raspbian', type='http', auth='none')
+    def perform_flashing_copy_raspbian(self):
+        try:
+            response = subprocess.check_output(['sudo', 'bash', '-c', '. /home/pi/odoo/addons/point_of_sale/tools/posbox/configuration/upgrade.sh; copy_raspbian']).decode().split('\n')[-2]
+            if response == 'Error_Iotbox_Download':
+                raise Exception(response)
+            return Response('success', status=200)
+        except subprocess.CalledProcessError as e:
+            raise Exception(e.output)
+        except Exception as e:
+            self.clean_partition()
+            _logger.error('A error encountered : %s ' % e)
+            return Response(str(e), status=500)

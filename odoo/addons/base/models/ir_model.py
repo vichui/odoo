@@ -221,6 +221,7 @@ class IrModel(models.Model):
         # reload is done independently in odoo.modules.loading.
         if not self._context.get(MODULE_UNINSTALL_FLAG):
             # setup models; this automatically removes model from registry
+            self.flush()
             self.pool.setup_models(self._cr)
 
         return res
@@ -245,6 +246,7 @@ class IrModel(models.Model):
         res = super(IrModel, self).create(vals)
         if vals.get('state', 'manual') == 'manual':
             # setup models; this automatically adds model in registry
+            self.flush()
             self.pool.setup_models(self._cr)
             # update database schema
             self.pool.init_models(self._cr, [vals['model']], dict(self._context, update_custom_fields=True))
@@ -314,7 +316,13 @@ class IrModel(models.Model):
         cr.execute('SELECT * FROM ir_model WHERE state=%s', ['manual'])
         for model_data in cr.dictfetchall():
             model_class = self._instanciate(model_data)
-            model_class._build_model(self.pool, cr)
+            Model = model_class._build_model(self.pool, cr)
+            if tools.table_kind(cr, Model._table) not in ('r', None):
+                # not a regular table, so disable schema upgrades
+                Model._auto = False
+                cr.execute('SELECT * FROM %s LIMIT 0' % Model._table)
+                columns = {desc[0] for desc in cr.description}
+                Model._log_access = set(models.LOG_ACCESS_COLUMNS) <= columns
 
 
 # retrieve field types defined by the framework only (not extensions)
@@ -675,14 +683,38 @@ class IrModelFields(models.Model):
         # prevent screwing up fields that depend on these fields
         self._prepare_update()
 
+        # determine registry fields corresponding to self
+        fields = []
+        for record in self:
+            try:
+                fields.append(self.pool[record.model]._fields[record.name])
+            except KeyError:
+                pass
+
         model_names = self.mapped('model')
         self._drop_column()
         res = super(IrModelFields, self).unlink()
+
+        # discard the removed fields from field triggers
+        def discard_fields(tree):
+            # discard fields from the tree's root node
+            tree.get(None, set()).difference_update(fields)
+            # discard subtrees labelled with any of the fields
+            for field in fields:
+                tree.pop(field, None)
+            # discard fields from remaining subtrees
+            for field, subtree in tree.items():
+                if field is not None:
+                    discard_fields(subtree)
+
+        discard_fields(self.pool.field_triggers)
+        self.pool.registry_invalidated = True
 
         # The field we just deleted might be inherited, and the registry is
         # inconsistent in this case; therefore we reload the registry.
         if not self._context.get(MODULE_UNINSTALL_FLAG):
             # setup models; this re-initializes models in registry
+            self.flush()
             self.pool.setup_models(self._cr)
             # update database schema of model and its descendant models
             models = self.pool.descendants(model_names, '_inherits')
@@ -710,6 +742,7 @@ class IrModelFields(models.Model):
 
             if vals['model'] in self.pool:
                 # setup models; this re-initializes model in registry
+                self.flush()
                 self.pool.setup_models(self._cr)
                 # update database schema of model and its descendant models
                 models = self.pool.descendants([vals['model']], '_inherits')
@@ -777,6 +810,7 @@ class IrModelFields(models.Model):
 
         if column_rename or patched_models:
             # setup models, this will reload all manual fields in registry
+            self.flush()
             self.pool.setup_models(self._cr)
 
         if patched_models:
@@ -962,9 +996,12 @@ class IrModelFields(models.Model):
         fields_data = self._get_manual_field_data(model._name)
         for name, field_data in fields_data.items():
             if name not in model._fields and field_data['state'] == 'manual':
-                field = self._instanciate(field_data)
-                if field:
-                    model._add_field(name, field)
+                try:
+                    field = self._instanciate(field_data)
+                    if field:
+                        model._add_field(name, field)
+                except Exception:
+                    _logger.exception("Failed to load field %s.%s: skipped", model._name, field_data['name'])
 
 
 class IrModelSelection(models.Model):
@@ -1102,6 +1139,7 @@ class IrModelSelection(models.Model):
         recs = super().create(vals_list)
 
         # setup models; this re-initializes model in registry
+        self.flush()
         self.pool.setup_models(self._cr)
 
         return recs
@@ -1156,8 +1194,12 @@ class IrModelSelection(models.Model):
 
         result = super().unlink()
 
-        # setup models; this re-initializes model in registry
-        self.pool.setup_models(self._cr)
+        # Reload registry for normal unlink only. For module uninstall, the
+        # reload is done independently in odoo.modules.loading.
+        if not self._context.get(MODULE_UNINSTALL_FLAG):
+            # setup models; this re-initializes model in registry
+            self.flush()
+            self.pool.setup_models(self._cr)
 
         return result
 
@@ -1453,6 +1495,8 @@ class IrModelAccess(models.Model):
             _logger.error('Missing model %s', model)
         elif self.env[model].is_transient():
             return True
+
+        self.flush(self._fields)
 
         # We check if a specific rule exists
         self._cr.execute("""SELECT MAX(CASE WHEN perm_{mode} THEN 1 ELSE 0 END)
@@ -1872,9 +1916,13 @@ class IrModelData(models.Model):
         constraints = self.env['ir.model.constraint'].search([('module', 'in', modules.ids)])
         constraints._module_data_uninstall()
 
-        # remove fields, selections and relations
+        # Remove fields, selections and relations. Note that the selections of
+        # removed fields do not require any "data fix", as their corresponding
+        # column no longer exists. We can therefore completely ignore them. That
+        # is why selections are removed after fields: most selections are
+        # deleted on cascade by their corresponding field.
         delete(self.env['ir.model.fields'].browse(field_ids))
-        delete(self.env['ir.model.fields.selection'].browse(selection_ids))
+        delete(self.env['ir.model.fields.selection'].browse(selection_ids).exists())
         relations = self.env['ir.model.relation'].search([('module', 'in', modules.ids)])
         relations._module_data_uninstall()
 

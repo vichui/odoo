@@ -156,7 +156,7 @@ class BaseAutomation(models.Model):
         """ Filter the records that satisfy the precondition of action ``self``. """
         if self.filter_pre_domain and records:
             domain = [('id', 'in', records.ids)] + safe_eval(self.filter_pre_domain, self._get_eval_context())
-            return records.search(domain)
+            return records.sudo().search(domain).with_env(records.env)
         else:
             return records
 
@@ -167,9 +167,19 @@ class BaseAutomation(models.Model):
         """ Filter the records that satisfy the postcondition of action ``self``. """
         if self.filter_domain and records:
             domain = [('id', 'in', records.ids)] + safe_eval(self.filter_domain, self._get_eval_context())
-            return records.search(domain), domain
+            return records.sudo().search(domain).with_env(records.env), domain
         else:
             return records, None
+
+    @api.model
+    def _add_postmortem_action(self, e):
+        if self.user_has_groups('base.group_user'):
+            e.context = {}
+            e.context['exception_class'] = 'base_automation'
+            e.context['base_automation'] = {
+                'id': self.id,
+                'name': self.name,
+            }
 
     def _process(self, records, domain_post=None):
         """ Process action ``self`` on the ``records`` that have not been done yet. """
@@ -204,7 +214,11 @@ class BaseAutomation(models.Model):
                         'active_id': record.id,
                         'domain_post': domain_post,
                     }
-                    self.action_server_id.with_context(**ctx).run()
+                    try:
+                        self.action_server_id.with_context(**ctx).run()
+                    except Exception as e:
+                        self._add_postmortem_action(e)
+                        raise e
 
     def _check_trigger_fields(self, record):
         """ Return whether any of the trigger fields has been modified on ``record``. """
@@ -285,9 +299,11 @@ class BaseAutomation(models.Model):
             # Note: This is to catch updates made by field recomputations.
             #
             def _compute_field_value(self, field):
-                # retrieve the action rules to possibly execute
-                if not field.store:
+                # determine fields that may trigger an action
+                stored_fields = [f for f in self._field_computed[field] if f.store]
+                if not any(stored_fields):
                     return _compute_field_value.origin(self, field)
+                # retrieve the action rules to possibly execute
                 actions = self.env['base.automation']._get_actions(self, ['on_write', 'on_create_or_write'])
                 records = self.filtered('id').with_env(actions.env)
                 # check preconditions on records
@@ -295,7 +311,7 @@ class BaseAutomation(models.Model):
                 # read old values before the update
                 old_values = {
                     old_vals.pop('id'): old_vals
-                    for old_vals in (records.read([field.name]))
+                    for old_vals in (records.read([f.name for f in stored_fields]))
                 }
                 # call original method
                 _compute_field_value.origin(self, field)
@@ -327,7 +343,12 @@ class BaseAutomation(models.Model):
                 action_rule = self.env['base.automation'].browse(action_rule_id)
                 result = {}
                 server_action = action_rule.action_server_id.with_context(active_model=self._name, onchange_self=self)
-                res = server_action.run()
+                try:
+                    res = server_action.run()
+                except Exception as e:
+                    action_rule._add_postmortem_action(e)
+                    raise e
+
                 if res:
                     if 'value' in res:
                         res['value'].pop('id', None)
